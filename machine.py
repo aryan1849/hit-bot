@@ -251,6 +251,27 @@ def wants_availability(message: str) -> bool:
     )
 
 
+def has_timetable_intent(message: str, schedules: Iterable[ClassSession]) -> bool:
+    words = words_from(message)
+    return (
+        detect_day(message) is not None
+        or detect_session_type(message) is not None
+        or detect_group(message) is not None
+        or detect_course(message, schedules) is not None
+        or wants_availability(message)
+        or "next" in message
+        or "upcoming" in message
+        or "when" in message
+        or message.startswith(("wen", "whn"))
+        or "timetable" in message
+        or "schedule" in message
+        or "class" in words
+        or "classes" in words
+        or "period" in words
+        or "periods" in words
+    )
+
+
 def is_only_small_talk(message: str, terms: set[str]) -> bool:
     words = words_from(message)
     return bool(words) and all(word in terms for word in words)
@@ -273,25 +294,31 @@ def conversational_reply(message: str) -> str | None:
         )
     ):
         return (
-            "I was crafted by Aryan for HIT students, so timetable questions do not have to feel "
-            "like decoding a spreadsheet."
+            "I was made by Aryan. He built me to make the HIT timetable easier to ask about, "
+            "without scrolling through a PDF every time."
         )
 
     if "your name" in message or "who are you" in message:
-        return "I am hit.bot, your HIT timetable assistant. Ask me naturally and I will check the schedule for you."
+        return (
+            "I am hit.bot. Think of me as a small timetable assistant for HIT: ask in normal "
+            "language, and I will translate that into the right class, lab, room, or time."
+        )
 
     if is_only_small_talk(message, greeting_words):
-        return "Hey! Ask me anything about the timetable. I can handle normal wording, typos, course codes, groups, and days."
+        return (
+            "Hey! Tell me what you want to know about the timetable. You can be casual, like "
+            "'do I have lab tomorrow?' or 'when is CSE2203?'"
+        )
 
     words = words_from(message)
     if any(word in thanks_words for word in words) and len(words) <= 4:
-        return "Anytime. Timetable chaos is exactly what I am here for."
+        return "You're welcome. I'll be here whenever the timetable starts looking suspiciously complicated."
 
     if is_only_small_talk(message, bye_words):
-        return "See you. Come back when the timetable starts acting mysterious again."
+        return "See you. I'll keep the schedule ready for the next panic-check."
 
     if "love you" in message or "you are good" in message or "nice bot" in message:
-        return "That is kind. I will stay useful and keep the timetable answers clean."
+        return "That's sweet. I'll try to earn it by keeping the answers clear and not making you hunt through the timetable."
 
     return None
 
@@ -353,9 +380,18 @@ def format_session(session: ClassSession) -> str:
         title = f"{session.course} {session.session_type}"
     faculty = "" if session.faculty == "-" else f" Faculty: {session.faculty}."
     return (
-        f"{title} for {session.department.upper()}{section} semester {session.semester} {group} "
-        f"is on {session.day.title()} from {start} to {end} in {session.room}.{faculty}"
+        f"You've got {title} on {session.day.title()} from {start} to {end}. "
+        f"It's for {session.department.upper()}{section}, semester {session.semester}, {group}, in {session.room}.{faculty}"
     )
+
+
+def compact_session(session: ClassSession) -> str:
+    start = session.start.strftime("%I:%M %p").lstrip("0")
+    end = session.end.strftime("%I:%M %p").lstrip("0")
+    group = "all groups" if session.group == "all" else f"group {session.group}"
+    title = session.course if session.course.lower() == session.session_type else f"{session.course} {session.session_type}"
+    faculty = "" if session.faculty == "-" else f" with {session.faculty}"
+    return f"{title} is {session.day.title()} {start}-{end} in {session.room} for {group}{faculty}."
 
 
 def answer_question(question: str, schedules: Iterable[ClassSession]) -> str:
@@ -366,27 +402,39 @@ def answer_question(question: str, schedules: Iterable[ClassSession]) -> str:
 
     if message in {"help", "commands"}:
         return (
-            "Try questions like: 'When is the next lab of CSE dept?', "
-            "'Show CSE classes on Tuesday', or 'next CSE group 2 lab'."
+            "Sure. Ask me the way you'd ask a friend who has the timetable open: "
+            "'When is the next lab?', 'Show Tuesday classes', or 'next CSE group 2 lab'."
+        )
+
+    if not has_timetable_intent(message, schedules):
+        return (
+            "I'm not fully sure what you want me to check. Ask me about a day, course, "
+            "group, lab, lecture, or whether you're free."
         )
 
     matches = filter_sessions(message, schedules)
 
     if not matches:
         if wants_availability(message):
-            return "Looks free from the timetable I have. I found no matching sessions for that question."
-        return "I could not find a matching class. Try mentioning department, day, semester, or lab/lecture."
+            return "From the timetable I have, it looks free. I couldn't find any matching class or lab for that."
+        return (
+            "I couldn't pin that down from the timetable. Try adding one detail, like the day, "
+            "group, course code, or whether you mean lab/lecture."
+        )
 
     if "next" in message or "upcoming" in message or "when" in message or message.startswith(("wen", "whn")):
         session = next_session(matches)
         return format_session(session) if session else "No upcoming matching class found."
 
     if wants_availability(message):
+        if len(matches) == 1:
+            return f"Yes, there is one matching session: {compact_session(matches[0])}"
         sessions = "\n".join(format_session(session) for session in matches)
         label = "session" if len(matches) == 1 else "sessions"
-        return f"Yes, I found {len(matches)} matching {label}.\n{sessions}"
+        return f"Yes. I found {len(matches)} matching {label}, so it doesn't look free:\n{sessions}"
 
-    return "\n".join(format_session(session) for session in matches)
+    sessions = "\n".join(format_session(session) for session in matches)
+    return f"Here's what I found. There are {len(matches)} matching sessions:\n{sessions}"
 
 
 def main() -> None:

@@ -245,6 +245,30 @@ function wantsAvailability(message) {
   );
 }
 
+function hasTimetableIntent(message) {
+  const words = wordsFrom(message);
+  const hasDay = Boolean(detectDay(message));
+  const hasSessionType = detectSessionType(message) !== null;
+  return (
+    hasDay ||
+    hasSessionType ||
+    detectGroup(message) !== null ||
+    detectCourse(message, schedules) !== null ||
+    wantsAvailability(message) ||
+    message.includes("next") ||
+    message.includes("upcoming") ||
+    message.includes("when") ||
+    message.startsWith("wen") ||
+    message.startsWith("whn") ||
+    message.includes("timetable") ||
+    message.includes("schedule") ||
+    words.includes("class") ||
+    words.includes("classes") ||
+    words.includes("period") ||
+    words.includes("periods")
+  );
+}
+
 function isOnlySmallTalk(message, terms) {
   const words = wordsFrom(message);
   return words.length > 0 && words.every((word) => terms.includes(word));
@@ -265,7 +289,7 @@ function conversationalReply(message) {
     message.includes("who is aryan")
   ) {
     return {
-      text: "I was crafted by Aryan for HIT students, so timetable questions do not have to feel like decoding a spreadsheet.",
+      text: "I was made by Aryan. He built me to make the HIT timetable easier to ask about, without scrolling through a PDF every time.",
       sessions: [],
       examples: ["next group 2 lab", "am I free tomorrow?", "when is CSE2203?"],
     };
@@ -273,7 +297,7 @@ function conversationalReply(message) {
 
   if (message.includes("your name") || message.includes("who are you")) {
     return {
-      text: "I am hit.bot, your HIT timetable assistant. Ask me naturally and I will check the schedule for you.",
+      text: "I am hit.bot. Think of me as a small timetable assistant for HIT: ask in normal language, and I will translate that into the right class, lab, room, or time.",
       sessions: [],
       examples: ["show today's classes", "next group 1 lab", "library for group 2"],
     };
@@ -281,7 +305,7 @@ function conversationalReply(message) {
 
   if (isOnlySmallTalk(message, greetingWords)) {
     return {
-      text: "Hey! Ask me anything about the timetable. I can handle normal wording, typos, course codes, groups, and days.",
+      text: "Hey! Tell me what you want to know about the timetable. You can be casual, like “do I have lab tomorrow?” or “when is CSE2203?”",
       sessions: [],
       examples: ["what is next?", "am I free tomorrow?", "next practical for gr2"],
     };
@@ -289,7 +313,7 @@ function conversationalReply(message) {
 
   if (words.some((word) => thanksWords.includes(word)) && words.length <= 4) {
     return {
-      text: "Anytime. Timetable chaos is exactly what I am here for.",
+      text: "You’re welcome. I’ll be here whenever the timetable starts looking suspiciously complicated.",
       sessions: [],
       examples: [],
     };
@@ -297,7 +321,7 @@ function conversationalReply(message) {
 
   if (isOnlySmallTalk(message, byeWords)) {
     return {
-      text: "See you. Come back when the timetable starts acting mysterious again.",
+      text: "See you. I’ll keep the schedule ready for the next panic-check.",
       sessions: [],
       examples: [],
     };
@@ -305,7 +329,7 @@ function conversationalReply(message) {
 
   if (message.includes("love you") || message.includes("you are good") || message.includes("nice bot")) {
     return {
-      text: "That is kind. I will stay useful and keep the timetable answers clean.",
+      text: "That’s sweet. I’ll try to earn it by keeping the answers clear and not making you hunt through the timetable.",
       sessions: [],
       examples: [],
     };
@@ -334,6 +358,14 @@ function formatTime(value) {
   const suffix = hours >= 12 ? "PM" : "AM";
   const hour = hours % 12 || 12;
   return `${hour}:${String(minutes).padStart(2, "0")} ${suffix}`;
+}
+
+function compactSession(session) {
+  const group = session.group === "all" ? "all groups" : `group ${session.group}`;
+  const faculty = session.faculty && session.faculty !== "-" ? ` with ${session.faculty}` : "";
+  return `${sessionTitle(session)} is ${capitalize(session.day)} ${formatTime(session.start)}-${formatTime(
+    session.end
+  )} in ${session.room} for ${group}${faculty}.`;
 }
 
 function filterSessions(question) {
@@ -383,9 +415,11 @@ function sessionDescription(session) {
   const section = session.section ? ` section ${session.section.toUpperCase()}` : "";
   const group = session.group === "all" ? "all groups" : `group ${session.group}`;
   const faculty = session.faculty && session.faculty !== "-" ? ` Faculty: ${session.faculty}.` : "";
-  return `${sessionTitle(session)} for ${session.department.toUpperCase()}${section} semester ${session.semester} ${group} is on ${capitalize(
-    session.day
-  )} from ${formatTime(session.start)} to ${formatTime(session.end)} in ${session.room}.${faculty}`;
+  return `You’ve got ${sessionTitle(session)} on ${capitalize(session.day)} from ${formatTime(session.start)} to ${formatTime(
+    session.end
+  )}. It’s for ${session.department.toUpperCase()}${section}, semester ${session.semester}, ${group}, in ${
+    session.room
+  }.${faculty}`;
 }
 
 function capitalize(value) {
@@ -401,9 +435,17 @@ function answerQuestion(question) {
 
   if (message === "help" || message === "commands") {
     return {
-      text: "Try questions like these:",
+      text: "Sure. Ask me the way you’d ask a friend who has the timetable open:",
       sessions: [],
       examples: ["next CSE group 2 lab", "show Monday classes", "when is CSE2203", "when is library for group 1"],
+    };
+  }
+
+  if (!hasTimetableIntent(message)) {
+    return {
+      text: "I’m not fully sure what you want me to check. Ask me about a day, course, group, lab, lecture, or whether you’re free.",
+      sessions: [],
+      examples: ["am I free tomorrow?", "next group 2 lab", "when is CSE2203?"],
     };
   }
 
@@ -411,14 +453,14 @@ function answerQuestion(question) {
   if (!matches.length) {
     if (wantsAvailability(message)) {
       return {
-        text: "Looks free from the timetable I have. I found no matching sessions for that question.",
+        text: "From the timetable I have, it looks free. I couldn’t find any matching class or lab for that.",
         sessions: [],
         examples: [],
       };
     }
 
     return {
-      text: "I could not find a matching class. Try adding a day, group, course code, or lab/lecture.",
+      text: "I couldn’t pin that down from the timetable. Try adding one detail, like the day, group, course code, or whether you mean lab/lecture.",
       sessions: [],
       examples: ["show Tuesday classes", "next group 1 lab", "when is CSE2201"],
     };
@@ -427,14 +469,20 @@ function answerQuestion(question) {
   const answerSessions = selectAnswerSessions(question, matches);
   if (wantsAvailability(message)) {
     return {
-      text: `Yes, I found ${answerSessions.length} matching session${answerSessions.length === 1 ? "" : "s"}.`,
+      text:
+        answerSessions.length === 1
+          ? `Yes, there is one matching session: ${compactSession(answerSessions[0])}`
+          : `Yes. I found ${answerSessions.length} matching sessions, so it doesn’t look free:`,
       sessions: answerSessions,
       examples: [],
     };
   }
 
   return {
-    text: answerSessions.length === 1 ? sessionDescription(answerSessions[0]) : `I found ${answerSessions.length} matching sessions.`,
+    text:
+      answerSessions.length === 1
+        ? sessionDescription(answerSessions[0])
+        : `Here’s what I found. There are ${answerSessions.length} matching sessions:`,
     sessions: answerSessions.length === 1 ? [] : answerSessions,
     examples: [],
   };
@@ -467,9 +515,10 @@ function addMessage(role, content) {
 
       const meta = document.createElement("div");
       meta.className = "session-meta";
+      const faculty = session.faculty && session.faculty !== "-" ? ` · ${session.faculty}` : "";
       meta.textContent = `${capitalize(session.day)} · ${formatTime(session.start)}-${formatTime(session.end)} · ${
         session.group === "all" ? "All groups" : `Group ${session.group}`
-      } · ${session.room}`;
+      } · ${session.room}${faculty}`;
 
       card.append(title, meta);
       list.append(card);
