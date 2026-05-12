@@ -265,6 +265,8 @@ def has_timetable_intent(message: str, schedules: Iterable[ClassSession]) -> boo
         or message.startswith(("wen", "whn"))
         or "timetable" in message
         or "schedule" in message
+        or "routine" in message
+        or "full routine" in message
         or "class" in words
         or "classes" in words
         or "period" in words
@@ -341,6 +343,21 @@ def filter_sessions(message: str, sessions: Iterable[ClassSession]) -> list[Clas
     group = detect_group(message)
     all_sessions = list(sessions)
     course = detect_course(message, all_sessions)
+    broad_schedule_request = any(
+        phrase in message
+        for phrase in (
+            "next",
+            "upcoming",
+            "timetable",
+            "schedule",
+            "routine",
+            "all classes",
+            "full routine",
+        )
+    )
+
+    if not any((department, session_type, day, semester, group, course, wants_availability(message), broad_schedule_request)):
+        return []
 
     matches = all_sessions
     if department:

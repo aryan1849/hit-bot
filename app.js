@@ -262,6 +262,8 @@ function hasTimetableIntent(message) {
     message.startsWith("whn") ||
     message.includes("timetable") ||
     message.includes("schedule") ||
+    message.includes("routine") ||
+    message.includes("full routine") ||
     words.includes("class") ||
     words.includes("classes") ||
     words.includes("period") ||
@@ -376,6 +378,18 @@ function filterSessions(question) {
   const semester = detectSemester(message);
   const group = detectGroup(message);
   const course = detectCourse(message, schedules);
+  const broadScheduleRequest =
+    message.includes("next") ||
+    message.includes("upcoming") ||
+    message.includes("timetable") ||
+    message.includes("schedule") ||
+    message.includes("routine") ||
+    message.includes("all classes") ||
+    message.includes("full routine");
+
+  if (!department && !sessionType && !day && !semester && !group && !course && !wantsAvailability(message) && !broadScheduleRequest) {
+    return [];
+  }
 
   return schedules
     .filter((session) => !department || session.department === department)
