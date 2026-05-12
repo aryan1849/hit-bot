@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>HIT Schedule Assistant</title>
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="Schedule overview">
+        <div class="brand">
+          <div class="brand-mark">H</div>
+          <div>
+            <h1>HIT Schedule</h1>
+            <p>CSE Section C</p>
+          </div>
+        </div>
+
+        <section class="stats" aria-label="Loaded timetable details">
+          <div>
+            <span id="sessionCount">--</span>
+            <small>sessions</small>
+          </div>
+          <div>
+            <span>2025-26</span>
+            <small>session</small>
+          </div>
+        </section>
+
+        <section class="quick-panel" aria-label="Quick questions">
+          <h2>Quick Ask</h2>
+          <button class="prompt-chip" type="button">What is next?</button>
+          <button class="prompt-chip" type="button">Next group 1 lab</button>
+          <button class="prompt-chip" type="button">Next group 2 lab</button>
+          <button class="prompt-chip" type="button">Show Monday classes</button>
+          <button class="prompt-chip" type="button">When is CSE2203?</button>
+        </section>
+
+        <section class="quick-panel compact" aria-label="Supported queries">
+          <h2>Understands</h2>
+          <div class="tag-list">
+            <span>today</span>
+            <span>tomorrow</span>
+            <span>labs</span>
+            <span>group 1</span>
+            <span>group 2</span>
+            <span>course code</span>
+          </div>
+        </section>
+      </aside>
+
+      <section class="chat-area" aria-label="Chatbot">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Heritage Institute of Technology</p>
+            <h2>Class Schedule Assistant</h2>
+          </div>
+          <button id="clearChat" class="icon-button" type="button" title="Clear chat" aria-label="Clear chat">
+            <span aria-hidden="true">↺</span>
+          </button>
+        </header>
+
+        <div id="messages" class="messages" aria-live="polite"></div>
+
+        <form id="chatForm" class="composer">
+          <label class="sr-only" for="questionInput">Ask about the timetable</label>
+          <textarea id="questionInput" rows="1" placeholder="Ask: when is the next lab of CSE group 2?"></textarea>
+          <button id="sendButton" type="submit" aria-label="Send message">
+            <span aria-hidden="true">↑</span>
+          </button>
+        </form>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
