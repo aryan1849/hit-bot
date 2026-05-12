@@ -43,6 +43,57 @@ DEPARTMENT_ALIASES = {
     "ece": "ece",
 }
 
+DAY_ALIASES = {
+    "today": "today",
+    "tody": "today",
+    "tomorrow": "tomorrow",
+    "tommorow": "tomorrow",
+    "tmrw": "tomorrow",
+    "tmw": "tomorrow",
+    "monday": "monday",
+    "mon": "monday",
+    "tuesday": "tuesday",
+    "tue": "tuesday",
+    "tues": "tuesday",
+    "wednesday": "wednesday",
+    "wed": "wednesday",
+    "thursday": "thursday",
+    "thu": "thursday",
+    "thurs": "thursday",
+    "friday": "friday",
+    "fri": "friday",
+    "saturday": "saturday",
+    "sat": "saturday",
+    "sunday": "sunday",
+    "sun": "sunday",
+}
+
+SESSION_TYPE_ALIASES = {
+    "lab": "lab",
+    "labs": "lab",
+    "practical": "lab",
+    "practicals": "lab",
+    "experiment": "lab",
+    "experiments": "lab",
+    "keyboard": "lab",
+    "computer": "lab",
+    "coding": "lab",
+    "lecture": "lecture",
+    "lectures": "lecture",
+    "class": None,
+    "classes": None,
+    "period": None,
+    "periods": None,
+    "subject": None,
+    "subjects": None,
+    "library": "library",
+    "remedial": "remedial",
+    "mentor": "mentoring",
+    "mentoring": "mentoring",
+    "life skill": "life skills",
+    "life skills": "life skills",
+}
+
 
 def parse_time(value: str) -> time:
     return datetime.strptime(value.strip(), "%H:%M").time()
@@ -75,42 +126,80 @@ def load_schedules() -> list[ClassSession]:
 
 
 def normalize(text: str) -> str:
-    return " ".join(text.lower().replace("'", "").replace("?", "").split())
+    return (
+        " ".join(
+            text.lower()
+            .replace("'", "")
+            .replace("&", " and ")
+            .replace("w/", "with ")
+            .replace("?", " ")
+            .replace("!", " ")
+            .replace(".", " ")
+            .split()
+        )
+        .replace(" w ", " with ")
+    )
+
+
+def words_from(message: str) -> list[str]:
+    return [word for word in message.split() if word.isalnum()]
+
+
+def edit_distance(left: str, right: str) -> int:
+    costs = list(range(len(right) + 1))
+
+    for i, left_char in enumerate(left, start=1):
+        previous = costs[0]
+        costs[0] = i
+        for j, right_char in enumerate(right, start=1):
+            current = costs[j]
+            if left_char == right_char:
+                costs[j] = previous
+            else:
+                costs[j] = min(previous + 1, costs[j] + 1, costs[j - 1] + 1)
+            previous = current
+
+    return costs[-1]
+
+
+def fuzzy_find(words: list[str], candidates: Iterable[str], max_distance: int = 1) -> str | None:
+    for candidate in candidates:
+        if any(len(word) > 2 and edit_distance(word, candidate) <= max_distance for word in words):
+            return candidate
+    return None
 
 
 def detect_department(message: str) -> str | None:
+    words = words_from(message)
     for alias, department in DEPARTMENT_ALIASES.items():
-        if alias in message:
+        if (len(alias) <= 3 and alias in words) or (len(alias) > 3 and alias in message):
             return department
-    return None
+
+    fuzzy = fuzzy_find(words, DEPARTMENT_ALIASES.keys())
+    return DEPARTMENT_ALIASES[fuzzy] if fuzzy else None
 
 
 def detect_session_type(message: str) -> str | None:
-    if "lab" in message or "practical" in message:
-        return "lab"
-    if "library" in message:
-        return "library"
-    if "remedial" in message:
-        return "remedial"
-    if "mentor" in message:
-        return "mentoring"
-    if "life skill" in message:
-        return "life skills"
-    if "lecture" in message:
-        return "lecture"
-    return None
+    for alias, session_type in SESSION_TYPE_ALIASES.items():
+        if alias in message:
+            return session_type
+
+    fuzzy = fuzzy_find(words_from(message), [alias for alias in SESSION_TYPE_ALIASES if " " not in alias])
+    return SESSION_TYPE_ALIASES[fuzzy] if fuzzy else None
 
 
 def detect_day(message: str) -> str | None:
-    if "today" in message:
+    words = words_from(message)
+    direct = next((DAY_ALIASES[alias] for alias in DAY_ALIASES if alias in words or alias in message), None)
+    fuzzy = direct or fuzzy_find(words, DAY_ALIASES.keys(), 1)
+    day = DAY_ALIASES.get(fuzzy, fuzzy)
+
+    if day == "today":
         return datetime.now().strftime("%A").lower()
-    if "tomorrow" in message:
+    if day == "tomorrow":
         return (datetime.now() + timedelta(days=1)).strftime("%A").lower()
 
-    for day in DAYS:
-        if day in message:
-            return day
-    return None
+    return day if day in DAYS else None
 
 
 def detect_semester(message: str) -> str | None:
@@ -141,7 +230,25 @@ def detect_course(message: str, sessions: Iterable[ClassSession]) -> str | None:
     for course in courses:
         if course in message or course.replace(" ", "") in compact_message:
             return course
-    return None
+
+    return fuzzy_find(words_from(message), [course.replace(" ", "") for course in courses], 1)
+
+
+def wants_availability(message: str) -> bool:
+    return any(
+        phrase in message
+        for phrase in (
+            "do i have",
+            "i have",
+            "have to",
+            "have class",
+            "any class",
+            "any lab",
+            "am i free",
+            "free tomorrow",
+            "free today",
+        )
+    )
 
 
 def minutes_since_week_start(day: str, start: time) -> int:
@@ -218,11 +325,18 @@ def answer_question(question: str, schedules: Iterable[ClassSession]) -> str:
     matches = filter_sessions(message, schedules)
 
     if not matches:
+        if wants_availability(message):
+            return "Looks free from the timetable I have. I found no matching sessions for that question."
         return "I could not find a matching class. Try mentioning department, day, semester, or lab/lecture."
 
-    if "next" in message or "upcoming" in message or "when" in message:
+    if "next" in message or "upcoming" in message or "when" in message or message.startswith(("wen", "whn")):
         session = next_session(matches)
         return format_session(session) if session else "No upcoming matching class found."
+
+    if wants_availability(message):
+        sessions = "\n".join(format_session(session) for session in matches)
+        label = "session" if len(matches) == 1 else "sessions"
+        return f"Yes, I found {len(matches)} matching {label}.\n{sessions}"
 
     return "\n".join(format_session(session) for session in matches)
 

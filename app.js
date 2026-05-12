@@ -8,6 +8,57 @@ const DEPARTMENT_ALIASES = {
   ece: "ece",
 };
 
+const DAY_ALIASES = {
+  today: "today",
+  tody: "today",
+  tomorrow: "tomorrow",
+  tommorow: "tomorrow",
+  tmrw: "tomorrow",
+  tmw: "tomorrow",
+  monday: "monday",
+  mon: "monday",
+  tuesday: "tuesday",
+  tue: "tuesday",
+  tues: "tuesday",
+  wednesday: "wednesday",
+  wed: "wednesday",
+  thursday: "thursday",
+  thu: "thursday",
+  thurs: "thursday",
+  friday: "friday",
+  fri: "friday",
+  saturday: "saturday",
+  sat: "saturday",
+  sunday: "sunday",
+  sun: "sunday",
+};
+
+const SESSION_TYPE_ALIASES = {
+  lab: "lab",
+  labs: "lab",
+  practical: "lab",
+  practicals: "lab",
+  experiment: "lab",
+  experiments: "lab",
+  keyboard: "lab",
+  computer: "lab",
+  coding: "lab",
+  lecture: "lecture",
+  lectures: "lecture",
+  class: null,
+  classes: null,
+  period: null,
+  periods: null,
+  subject: null,
+  subjects: null,
+  library: "library",
+  remedial: "remedial",
+  mentor: "mentoring",
+  mentoring: "mentoring",
+  "life skill": "life skills",
+  "life skills": "life skills",
+};
+
 const messages = document.querySelector("#messages");
 const form = document.querySelector("#chatForm");
 const input = document.querySelector("#questionInput");
@@ -62,34 +113,81 @@ function parseCsv(text) {
 }
 
 function normalize(text) {
-  return text.toLowerCase().replaceAll("'", "").replace(/[?!.]/g, " ").replace(/\s+/g, " ").trim();
+  return text
+    .toLowerCase()
+    .replaceAll("'", "")
+    .replaceAll("&", " and ")
+    .replace(/\bw\//g, "with ")
+    .replace(/\bw\b/g, "with")
+    .replace(/[?!.]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function wordsFrom(message) {
+  return message.match(/[a-z0-9]+/g) || [];
+}
+
+function editDistance(left, right) {
+  const costs = Array.from({ length: right.length + 1 }, (_, index) => index);
+
+  for (let i = 1; i <= left.length; i += 1) {
+    let previous = costs[0];
+    costs[0] = i;
+    for (let j = 1; j <= right.length; j += 1) {
+      const current = costs[j];
+      costs[j] =
+        left[i - 1] === right[j - 1]
+          ? previous
+          : Math.min(previous + 1, costs[j] + 1, costs[j - 1] + 1);
+      previous = current;
+    }
+  }
+
+  return costs[right.length];
+}
+
+function fuzzyFind(words, candidates, maxDistance = 1) {
+  return candidates.find((candidate) =>
+    words.some((word) => word.length > 2 && editDistance(word, candidate) <= maxDistance)
+  );
 }
 
 function detectDepartment(message) {
-  return Object.entries(DEPARTMENT_ALIASES).find(([alias]) => message.includes(alias))?.[1] || null;
+  const words = wordsFrom(message);
+  const direct = Object.entries(DEPARTMENT_ALIASES).find(([alias]) =>
+    alias.length <= 3 ? words.includes(alias) : message.includes(alias)
+  )?.[1];
+  if (direct) return direct;
+
+  const fuzzy = fuzzyFind(words, Object.keys(DEPARTMENT_ALIASES));
+  return fuzzy ? DEPARTMENT_ALIASES[fuzzy] : null;
 }
 
 function detectSessionType(message) {
-  if (message.includes("lab") || message.includes("practical")) return "lab";
-  if (message.includes("library")) return "library";
-  if (message.includes("remedial")) return "remedial";
-  if (message.includes("mentor")) return "mentoring";
-  if (message.includes("life skill")) return "life skills";
-  if (message.includes("lecture")) return "lecture";
-  return null;
+  const direct = Object.entries(SESSION_TYPE_ALIASES).find(([alias]) => message.includes(alias));
+  if (direct) return direct[1];
+
+  const fuzzy = fuzzyFind(wordsFrom(message), Object.keys(SESSION_TYPE_ALIASES).filter((alias) => !alias.includes(" ")));
+  return fuzzy ? SESSION_TYPE_ALIASES[fuzzy] : null;
 }
 
 function detectDay(message) {
   const now = new Date();
-  if (message.includes("today")) {
+  const words = wordsFrom(message);
+  const direct = Object.entries(DAY_ALIASES).find(([alias]) => words.includes(alias) || message.includes(alias))?.[1];
+  const fuzzy = direct || fuzzyFind(words, Object.keys(DAY_ALIASES), 1);
+  const day = DAY_ALIASES[fuzzy] || fuzzy;
+
+  if (day === "today") {
     return DAYS[(now.getDay() + 6) % 7];
   }
-  if (message.includes("tomorrow")) {
+  if (day === "tomorrow") {
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
     return DAYS[(tomorrow.getDay() + 6) % 7];
   }
-  return DAYS.find((day) => message.includes(day)) || null;
+  return DAYS.includes(day) ? day : null;
 }
 
 function detectSemester(message) {
@@ -127,7 +225,24 @@ function detectCourse(message, sessions) {
   const courses = [...new Set(sessions.map((session) => session.course.toLowerCase()))].sort(
     (a, b) => b.length - a.length
   );
-  return courses.find((course) => message.includes(course) || compactMessage.includes(course.replaceAll(" ", ""))) || null;
+  const direct = courses.find((course) => message.includes(course) || compactMessage.includes(course.replaceAll(" ", "")));
+  if (direct) return direct;
+
+  return fuzzyFind(wordsFrom(message), courses.map((course) => course.replaceAll(" ", "")), 1);
+}
+
+function wantsAvailability(message) {
+  return (
+    message.includes("do i have") ||
+    message.includes("i have") ||
+    message.includes("have to") ||
+    message.includes("have class") ||
+    message.includes("any class") ||
+    message.includes("any lab") ||
+    message.includes("am i free") ||
+    message.includes("free tomorrow") ||
+    message.includes("free today")
+  );
 }
 
 function timeToMinutes(value) {
@@ -173,7 +288,15 @@ function filterSessions(question) {
 
 function selectAnswerSessions(question, matches) {
   const message = normalize(question);
-  if (message.includes("next") || message.includes("upcoming") || message.startsWith("when")) {
+  if (
+    message.includes("next") ||
+    message.includes("upcoming") ||
+    message.startsWith("when") ||
+    message.startsWith("wen") ||
+    message.startsWith("whn") ||
+    message.includes("when is") ||
+    message.includes("whens")
+  ) {
     const now = currentWeekMinute();
     return [matches.find((session) => sessionWeekMinute(session) >= now) || matches[0]].filter(Boolean);
   }
@@ -212,6 +335,14 @@ function answerQuestion(question) {
 
   const matches = filterSessions(question);
   if (!matches.length) {
+    if (wantsAvailability(message)) {
+      return {
+        text: "Looks free from the timetable I have. I found no matching sessions for that question.",
+        sessions: [],
+        examples: [],
+      };
+    }
+
     return {
       text: "I could not find a matching class. Try adding a day, group, course code, or lab/lecture.",
       sessions: [],
@@ -220,6 +351,14 @@ function answerQuestion(question) {
   }
 
   const answerSessions = selectAnswerSessions(question, matches);
+  if (wantsAvailability(message)) {
+    return {
+      text: `Yes, I found ${answerSessions.length} matching session${answerSessions.length === 1 ? "" : "s"}.`,
+      sessions: answerSessions,
+      examples: [],
+    };
+  }
+
   return {
     text: answerSessions.length === 1 ? sessionDescription(answerSessions[0]) : `I found ${answerSessions.length} matching sessions.`,
     sessions: answerSessions.length === 1 ? [] : answerSessions,
