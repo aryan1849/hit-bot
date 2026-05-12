@@ -251,6 +251,51 @@ def wants_availability(message: str) -> bool:
     )
 
 
+def is_only_small_talk(message: str, terms: set[str]) -> bool:
+    words = words_from(message)
+    return bool(words) and all(word in terms for word in words)
+
+
+def conversational_reply(message: str) -> str | None:
+    greeting_words = {"hi", "hello", "hey", "yo", "sup", "namaste"}
+    thanks_words = {"thanks", "thank", "thankyou", "ty", "thx"}
+    bye_words = {"bye", "goodbye", "cya", "see", "later"}
+
+    if any(
+        phrase in message
+        for phrase in (
+            "owner",
+            "creator",
+            "made you",
+            "built you",
+            "who made",
+            "who is aryan",
+        )
+    ):
+        return (
+            "I was crafted by Aryan for HIT students, so timetable questions do not have to feel "
+            "like decoding a spreadsheet."
+        )
+
+    if "your name" in message or "who are you" in message:
+        return "I am hit.bot, your HIT timetable assistant. Ask me naturally and I will check the schedule for you."
+
+    if is_only_small_talk(message, greeting_words):
+        return "Hey! Ask me anything about the timetable. I can handle normal wording, typos, course codes, groups, and days."
+
+    words = words_from(message)
+    if any(word in thanks_words for word in words) and len(words) <= 4:
+        return "Anytime. Timetable chaos is exactly what I am here for."
+
+    if is_only_small_talk(message, bye_words):
+        return "See you. Come back when the timetable starts acting mysterious again."
+
+    if "love you" in message or "you are good" in message or "nice bot" in message:
+        return "That is kind. I will stay useful and keep the timetable answers clean."
+
+    return None
+
+
 def minutes_since_week_start(day: str, start: time) -> int:
     return DAYS.index(day) * 24 * 60 + start.hour * 60 + start.minute
 
@@ -315,6 +360,9 @@ def format_session(session: ClassSession) -> str:
 
 def answer_question(question: str, schedules: Iterable[ClassSession]) -> str:
     message = normalize(question)
+    conversation = conversational_reply(message)
+    if conversation:
+        return conversation
 
     if message in {"help", "commands"}:
         return (
@@ -343,7 +391,7 @@ def answer_question(question: str, schedules: Iterable[ClassSession]) -> str:
 
 def main() -> None:
     schedules = load_schedules()
-    print("College Schedule Chatbot")
+    print("hit.bot")
     print("Ask about class schedules. Type 'help' for examples or 'exit' to stop.")
     print(f"Loaded {len(schedules)} sessions from {SCHEDULE_FILE.name}.")
 

@@ -245,6 +245,75 @@ function wantsAvailability(message) {
   );
 }
 
+function isOnlySmallTalk(message, terms) {
+  const words = wordsFrom(message);
+  return words.length > 0 && words.every((word) => terms.includes(word));
+}
+
+function conversationalReply(message) {
+  const words = wordsFrom(message);
+  const greetingWords = ["hi", "hello", "hey", "yo", "sup", "namaste"];
+  const thanksWords = ["thanks", "thank", "thankyou", "ty", "thx"];
+  const byeWords = ["bye", "goodbye", "cya", "see", "later"];
+
+  if (
+    message.includes("owner") ||
+    message.includes("creator") ||
+    message.includes("made you") ||
+    message.includes("built you") ||
+    message.includes("who made") ||
+    message.includes("who is aryan")
+  ) {
+    return {
+      text: "I was crafted by Aryan for HIT students, so timetable questions do not have to feel like decoding a spreadsheet.",
+      sessions: [],
+      examples: ["next group 2 lab", "am I free tomorrow?", "when is CSE2203?"],
+    };
+  }
+
+  if (message.includes("your name") || message.includes("who are you")) {
+    return {
+      text: "I am hit.bot, your HIT timetable assistant. Ask me naturally and I will check the schedule for you.",
+      sessions: [],
+      examples: ["show today's classes", "next group 1 lab", "library for group 2"],
+    };
+  }
+
+  if (isOnlySmallTalk(message, greetingWords)) {
+    return {
+      text: "Hey! Ask me anything about the timetable. I can handle normal wording, typos, course codes, groups, and days.",
+      sessions: [],
+      examples: ["what is next?", "am I free tomorrow?", "next practical for gr2"],
+    };
+  }
+
+  if (words.some((word) => thanksWords.includes(word)) && words.length <= 4) {
+    return {
+      text: "Anytime. Timetable chaos is exactly what I am here for.",
+      sessions: [],
+      examples: [],
+    };
+  }
+
+  if (isOnlySmallTalk(message, byeWords)) {
+    return {
+      text: "See you. Come back when the timetable starts acting mysterious again.",
+      sessions: [],
+      examples: [],
+    };
+  }
+
+  if (message.includes("love you") || message.includes("you are good") || message.includes("nice bot")) {
+    return {
+      text: "That is kind. I will stay useful and keep the timetable answers clean.",
+      sessions: [],
+      examples: [],
+    };
+  }
+
+  return null;
+}
+
 function timeToMinutes(value) {
   const [hours, minutes] = value.split(":").map(Number);
   return hours * 60 + minutes;
@@ -325,6 +394,11 @@ function capitalize(value) {
 
 function answerQuestion(question) {
   const message = normalize(question);
+  const conversation = conversationalReply(message);
+  if (conversation) {
+    return conversation;
+  }
+
   if (message === "help" || message === "commands") {
     return {
       text: "Try questions like these:",
@@ -482,9 +556,9 @@ promptChips.forEach((chip) => {
 loadSchedules()
   .then(() => {
     addMessage("assistant", {
-      text: "Hi! I can answer timetable questions for CSE Section C. Ask naturally, like 'next group 2 lab' or 'when is CSE2203'.",
+      text: "Hey, I am hit.bot. Ask me naturally about the CSE Section C timetable, even with typos.",
       sessions: [],
-      examples: [],
+      examples: ["am I free tomorrow?", "next group 2 lab", "who made you?"],
     });
   })
   .catch(() => {
