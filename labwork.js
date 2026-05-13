@@ -166,6 +166,7 @@ window.renderLabwork = function() {
           const img = document.createElement("img");
           img.src = imgSrc;
           img.alt = "Labwork";
+          img.addEventListener("click", () => openImageViewer(imgSrc));
           gallery.appendChild(img);
         });
       }
@@ -212,3 +213,73 @@ window.renderLabwork = function() {
     labworkGrid.appendChild(card);
   });
 };
+
+function openImageViewer(imageSrc) {
+  const modal = document.getElementById("imageViewerModal");
+  const imgElement = document.getElementById("viewerImage");
+  const downloadBtn = document.getElementById("downloadImageBtn");
+  const shareBtn = document.getElementById("shareImageBtn");
+  const closeBtn = document.getElementById("closeImageViewer");
+  const backdrop = modal.querySelector(".image-viewer-backdrop");
+  
+  if (!modal || !imgElement) return;
+  
+  imgElement.src = imageSrc;
+  modal.classList.remove("hidden");
+  
+  const closeModal = () => {
+    modal.classList.add("hidden");
+    imgElement.src = "";
+  };
+  
+  closeBtn.onclick = closeModal;
+  backdrop.onclick = closeModal;
+  
+  downloadBtn.onclick = async () => {
+    downloadBtn.style.opacity = "0.7";
+    downloadBtn.textContent = "Downloading...";
+    try {
+      const response = await fetch(imageSrc);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = "labwork_" + Date.now() + ".jpg";
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (e) {
+      alert("Failed to download image.");
+    }
+    downloadBtn.style.opacity = "1";
+    downloadBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Download';
+  };
+  
+  shareBtn.onclick = async () => {
+    try {
+      const response = await fetch(imageSrc);
+      const blob = await response.blob();
+      const file = new File([blob], "labwork.jpg", { type: blob.type });
+      
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: 'Labwork Photo',
+        });
+      } else if (navigator.share) {
+        await navigator.share({
+          title: 'Labwork Photo',
+          url: imageSrc
+        });
+      } else {
+        alert("Sharing is not supported on this device/browser.");
+      }
+    } catch (e) {
+      if (e.name !== 'AbortError') {
+        console.error("Error sharing:", e);
+      }
+    }
+  };
+}
