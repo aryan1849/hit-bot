@@ -49,22 +49,57 @@ async function getImagesForLab(course, day, group) {
   const folder = `${course.toLowerCase()}/${day.toLowerCase()}/${group.toLowerCase()}`;
   const { data, error } = await supabaseClient.storage.from('labwork').list(folder);
   
-  if (error || !data) {
-    console.error("Error fetching images:", error);
-    return [];
-  }
+  const validImages = [];
+  const filesToDelete = [];
+  const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
   
-  return data
-    .filter(file => file.name !== '.emptyFolderPlaceholder')
-    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
-    .map(file => {
+  data.forEach(file => {
+    if (file.name === '.emptyFolderPlaceholder') return;
+    
+    const fileAge = Date.now() - new Date(file.created_at || 0).getTime();
+    if (fileAge > SEVEN_DAYS_MS) {
+      filesToDelete.push(`${folder}/${file.name}`);
+    } else {
       const { data: publicUrlData } = supabaseClient.storage.from('labwork').getPublicUrl(`${folder}/${file.name}`);
       const dateStr = file.created_at ? new Date(file.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "Unknown Date";
-      return {
+      validImages.push({
         url: publicUrlData.publicUrl,
-        date: dateStr
-      };
-    });
+        date: dateStr,
+        created_at: file.created_at
+      });
+    }
+  });
+
+  // Lazy auto-delete expired photos
+  if (filesToDelete.length > 0) {
+    supabaseClient.storage.from('labwork').remove(filesToDelete)
+      .catch(e => console.error("Auto-delete failed. Make sure you have a DELETE policy in Supabase.", e));
+  }
+  
+  return validImages.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+}
+
+// Utility to calculate exactly which calendar date the next lab occurrence is
+function getNextLabDate(dayStr, timeStr) {
+  const targetDay = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"].indexOf(dayStr.toLowerCase());
+  const now = new Date();
+  const currentDay = now.getDay();
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  
+  let daysUntil = targetDay - currentDay;
+  
+  // If the lab is today, but the time has already passed, it's next week
+  if (daysUntil === 0) {
+    if (now.getHours() > hours || (now.getHours() === hours && now.getMinutes() > minutes)) {
+      daysUntil = 7;
+    }
+  } else if (daysUntil < 0) {
+    daysUntil += 7;
+  }
+  
+  const targetDate = new Date(now);
+  targetDate.setDate(now.getDate() + daysUntil);
+  return targetDate;
 }
 
 async function addImageForLab(course, day, group, file) {
@@ -147,12 +182,21 @@ window.renderLabwork = function() {
     const header = document.createElement("div");
     const title = document.createElement("h3");
     title.textContent = lab.course.toUpperCase() + " Lab";
+    
+    const targetDate = getNextLabDate(lab.day, lab.start);
+    const targetDateStr = targetDate.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+    
     const meta = document.createElement("div");
     meta.className = "meta";
     meta.innerHTML = `
-      <span>${lab.day.charAt(0).toUpperCase() + lab.day.slice(1)}</span>
       <span>${formatTimeDisplay(lab.start)} - ${formatTimeDisplay(lab.end)}</span>
       <span>Room: ${lab.room}</span>
+      <div style="margin-top: 8px; color: var(--gold); font-weight: 500; font-size: 0.85rem;">
+        📸 Intended for lab on:<br/> ${targetDateStr}
+      </div>
+      <div style="color: var(--muted); font-size: 0.75rem; margin-top: 2px;">
+        Photos auto-delete after 7 days
+      </div>
     `;
     
     header.appendChild(title);
@@ -217,6 +261,12 @@ window.renderLabwork = function() {
     fileInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (!file) return;
+      
+      const confirmUpload = confirm(`Upload this photo for the lab on ${targetDateStr}?\n\nIt will be visible to everyone in your group and automatically deleted after 7 days.`);
+      if (!confirmUpload) {
+        fileInput.value = "";
+        return;
+      }
       
       uploadBtn.textContent = "Uploading...";
       uploadBtn.style.opacity = "0.7";
