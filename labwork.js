@@ -36,7 +36,14 @@ async function getImagesForLab(course, day, group) {
     // Fallback to local storage if keys are not set yet (for demonstration)
     const key = `labwork_images_${course}_${day}_${group}`;
     const data = localStorage.getItem(key);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    
+    // For local fallback, we'll just mock the date
+    const parsed = JSON.parse(data);
+    return parsed.map(url => ({
+      url: url,
+      date: new Date().toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+    }));
   }
 
   const folder = `${course.toLowerCase()}/${day.toLowerCase()}/${group.toLowerCase()}`;
@@ -49,9 +56,14 @@ async function getImagesForLab(course, day, group) {
   
   return data
     .filter(file => file.name !== '.emptyFolderPlaceholder')
+    .sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))
     .map(file => {
       const { data: publicUrlData } = supabaseClient.storage.from('labwork').getPublicUrl(`${folder}/${file.name}`);
-      return publicUrlData.publicUrl;
+      const dateStr = file.created_at ? new Date(file.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "Unknown Date";
+      return {
+        url: publicUrlData.publicUrl,
+        date: dateStr
+      };
     });
 }
 
@@ -162,12 +174,26 @@ window.renderLabwork = function() {
         gallery.style.display = "none";
       } else {
         gallery.style.display = "grid";
-        images.forEach(imgSrc => {
+        images.forEach(imgData => {
+          const wrapper = document.createElement("div");
+          wrapper.style.position = "relative";
+          wrapper.style.overflow = "hidden";
+          wrapper.style.borderRadius = "8px";
+          wrapper.style.border = "1px solid var(--line)";
+          
           const img = document.createElement("img");
-          img.src = imgSrc;
+          img.src = imgData.url;
           img.alt = "Labwork";
-          img.addEventListener("click", () => openImageViewer(imgSrc));
-          gallery.appendChild(img);
+          img.style.border = "none"; // Remove border from img since wrapper has it
+          img.addEventListener("click", () => openImageViewer(imgData.url, imgData.date));
+          
+          const dateBadge = document.createElement("div");
+          dateBadge.textContent = imgData.date;
+          dateBadge.className = "date-badge";
+          
+          wrapper.appendChild(img);
+          wrapper.appendChild(dateBadge);
+          gallery.appendChild(wrapper);
         });
       }
     };
@@ -214,7 +240,7 @@ window.renderLabwork = function() {
   });
 };
 
-function openImageViewer(imageSrc) {
+function openImageViewer(imageSrc, dateStr) {
   const modal = document.getElementById("imageViewerModal");
   const imgElement = document.getElementById("viewerImage");
   const downloadBtn = document.getElementById("downloadImageBtn");
@@ -223,6 +249,18 @@ function openImageViewer(imageSrc) {
   const backdrop = modal.querySelector(".image-viewer-backdrop");
   
   if (!modal || !imgElement) return;
+  
+  // Create or update the date label in the modal
+  let dateLabel = document.getElementById("viewerDateLabel");
+  if (!dateLabel) {
+    dateLabel = document.createElement("div");
+    dateLabel.id = "viewerDateLabel";
+    dateLabel.style.color = "var(--muted)";
+    dateLabel.style.marginTop = "12px";
+    dateLabel.style.fontSize = "0.9rem";
+    document.querySelector(".image-viewer-actions").insertAdjacentElement('beforebegin', dateLabel);
+  }
+  dateLabel.textContent = `Uploaded on: ${dateStr}`;
   
   imgElement.src = imageSrc;
   modal.classList.remove("hidden");
