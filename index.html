@@ -18,6 +18,9 @@
       </div>
     </div>
     <div class="app-shell">
+      <!-- Overlay for mobile sidebar -->
+      <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
       <aside class="sidebar" id="sidebar" aria-label="Schedule overview">
         <div class="brand">
           <div class="brand-mark">H</div>
@@ -66,10 +69,15 @@
 
       <main class="main-content" aria-label="App content">
         <header class="topbar">
-          <div>
-            <p class="eyebrow">Heritage Institute of Technology</p>
-            <h2>hit.bot</h2>
-            <p class="mobile-credit">Crafted by <span>Aryan</span></p>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <button id="menuBtn" class="icon-button" aria-label="Open menu" style="display: none; border: none; background: transparent; width: 32px; height: 32px; padding: 0;">
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"></line><line x1="3" y1="6" x2="21" y2="6"></line><line x1="3" y1="18" x2="21" y2="18"></line></svg>
+            </button>
+            <div>
+              <p class="eyebrow">Heritage Institute of Technology</p>
+              <h2>hit.bot</h2>
+              <p class="mobile-credit">Crafted by <span>Aryan</span></p>
+            </div>
           </div>
           <div class="nav-tabs">
             <button id="tabChat" class="tab active" type="button">Chat</button>

@@ -597,8 +597,32 @@ button {
     display: none;
   }
 
+  #menuBtn {
+    display: grid !important;
+  }
+  
   .sidebar {
-    display: none;
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: -320px;
+    width: 300px !important;
+    z-index: 1000;
+    transition: transform 0.3s ease;
+    border-right: 1px solid var(--line);
+  }
+  
+  .sidebar.open {
+    transform: translateX(320px);
+  }
+
+  .sidebar-overlay.active {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(4px);
+    z-index: 999;
   }
 
   .mobile-credit {
@@ -713,4 +737,8 @@ button {
   background: var(--surface);
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.sidebar-overlay {
+  display: none;
 }

@@ -765,3 +765,38 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
+
+// Mobile Sidebar Toggle Logic
+document.addEventListener('DOMContentLoaded', () => {
+  const menuBtn = document.getElementById('menuBtn');
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('sidebarOverlay');
+
+  if (menuBtn && sidebar && overlay) {
+    const toggleSidebar = () => {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('active');
+    };
+
+    menuBtn.addEventListener('click', toggleSidebar);
+    overlay.addEventListener('click', toggleSidebar);
+
+    // Close the sidebar when clicking any quick prompt on mobile
+    const promptChipsMobile = document.querySelectorAll('.prompt-chip');
+    promptChipsMobile.forEach(chip => {
+      chip.addEventListener('click', () => {
+        if (sidebar.classList.contains('open')) toggleSidebar();
+      });
+    });
+    
+    // Close sidebar when clicking a group button (in case they change groups)
+    const sidebarGroupBtns = sidebar.querySelectorAll('.group-btn');
+    if (sidebarGroupBtns) {
+      sidebarGroupBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          if (sidebar.classList.contains('open')) toggleSidebar();
+        });
+      });
+    }
+  }
+});
