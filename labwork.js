@@ -31,15 +31,15 @@ function getLabSessions() {
     });
 }
 
-async function getImagesForLab(course, day) {
+async function getImagesForLab(course, day, group) {
   if (!supabaseClient) {
     // Fallback to local storage if keys are not set yet (for demonstration)
-    const key = `labwork_images_${course}_${day}`;
+    const key = `labwork_images_${course}_${day}_${group}`;
     const data = localStorage.getItem(key);
     return data ? JSON.parse(data) : [];
   }
 
-  const folder = `${course.toLowerCase()}/${day.toLowerCase()}`;
+  const folder = `${course.toLowerCase()}/${day.toLowerCase()}/${group.toLowerCase()}`;
   const { data, error } = await supabaseClient.storage.from('labwork').list(folder);
   
   if (error || !data) {
@@ -55,7 +55,7 @@ async function getImagesForLab(course, day) {
     });
 }
 
-async function addImageForLab(course, day, file) {
+async function addImageForLab(course, day, group, file) {
   if (!supabaseClient) {
     alert("Cloud database is not connected. Saving locally for now.\n\nPlease open labwork.js and add your Supabase keys to share images globally.");
     
@@ -64,7 +64,7 @@ async function addImageForLab(course, day, file) {
       const reader = new FileReader();
       reader.onload = (event) => {
         const base64String = event.target.result;
-        const key = `labwork_images_${course}_${day}`;
+        const key = `labwork_images_${course}_${day}_${group}`;
         const images = localStorage.getItem(key) ? JSON.parse(localStorage.getItem(key)) : [];
         images.push(base64String);
         try {
@@ -79,7 +79,7 @@ async function addImageForLab(course, day, file) {
     });
   }
   
-  const folder = `${course.toLowerCase()}/${day.toLowerCase()}`;
+  const folder = `${course.toLowerCase()}/${day.toLowerCase()}/${group.toLowerCase()}`;
   const ext = file.name.split('.').pop() || 'jpg';
   const filename = `${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
   
@@ -155,7 +155,7 @@ window.renderLabwork = function() {
       gallery.innerHTML = "<span style='color: var(--muted); font-size: 0.8rem;'>Loading photos...</span>";
       gallery.style.display = "block";
       
-      const images = await getImagesForLab(lab.course, lab.day);
+      const images = await getImagesForLab(lab.course, lab.day, lab.group);
       
       gallery.innerHTML = "";
       if (images.length === 0) {
@@ -194,7 +194,7 @@ window.renderLabwork = function() {
       uploadBtn.textContent = "Uploading...";
       uploadBtn.style.opacity = "0.7";
       
-      const success = await addImageForLab(lab.course, lab.day, file);
+      const success = await addImageForLab(lab.course, lab.day, lab.group, file);
       
       if (success) {
           await renderGallery();
