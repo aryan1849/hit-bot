@@ -68,6 +68,11 @@ const promptChips = document.querySelectorAll(".prompt-chip");
 const groupModal = document.getElementById("groupModal");
 const groupBtns = document.querySelectorAll(".group-btn");
 
+const tabChat = document.getElementById("tabChat");
+const tabLabwork = document.getElementById("tabLabwork");
+const chatView = document.getElementById("chatView");
+const labworkView = document.getElementById("labworkView");
+
 let schedules = [];
 
 function parseCsv(text) {
@@ -648,6 +653,28 @@ clearChat.addEventListener("click", () => {
     sessions: [],
     examples: [],
   });
+});
+
+tabChat.addEventListener("click", () => {
+  tabChat.classList.add("active");
+  tabLabwork.classList.remove("active");
+  chatView.classList.add("active-view");
+  chatView.classList.remove("hidden-view");
+  labworkView.classList.add("hidden-view");
+  labworkView.classList.remove("active-view");
+});
+
+tabLabwork.addEventListener("click", () => {
+  tabLabwork.classList.add("active");
+  tabChat.classList.remove("active");
+  labworkView.classList.add("active-view");
+  labworkView.classList.remove("hidden-view");
+  chatView.classList.add("hidden-view");
+  chatView.classList.remove("active-view");
+  
+  if (window.renderLabwork) {
+    window.renderLabwork();
+  }
 });
 
 promptChips.forEach((chip) => {

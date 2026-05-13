@@ -62,27 +62,45 @@
         <p class="creator-credit">Crafted by <span>Aryan</span></p>
       </aside>
 
-      <section class="chat-area" aria-label="Chatbot">
+      <section class="main-content" aria-label="App content">
         <header class="topbar">
           <div>
             <p class="eyebrow">Heritage Institute of Technology</p>
             <h2>hit.bot</h2>
             <p class="mobile-credit">Crafted by <span>Aryan</span></p>
           </div>
+          <div class="nav-tabs">
+            <button id="tabChat" class="tab active" type="button">Chat</button>
+            <button id="tabLabwork" class="tab" type="button">Labwork Share</button>
+          </div>
           <button id="clearChat" class="icon-button" type="button" title="Clear chat" aria-label="Clear chat">
             <span aria-hidden="true">↺</span>
           </button>
         </header>
 
-        <div id="messages" class="messages" aria-live="polite"></div>
+        <div id="chatView" class="view active-view">
+          <div id="messages" class="messages" aria-live="polite"></div>
 
-        <form id="chatForm" class="composer">
-          <label class="sr-only" for="questionInput">Ask about the timetable</label>
-          <textarea id="questionInput" rows="1" placeholder="Ask: when is the next lab of CSE group 2?"></textarea>
-          <button id="sendButton" type="submit" aria-label="Send message">
-            <span aria-hidden="true">↑</span>
-          </button>
-        </form>
+          <form id="chatForm" class="composer">
+            <label class="sr-only" for="questionInput">Ask about the timetable</label>
+            <textarea id="questionInput" rows="1" placeholder="Ask: when is the next lab of CSE group 2?"></textarea>
+            <button id="sendButton" type="submit" aria-label="Send message">
+              <span aria-hidden="true">↑</span>
+            </button>
+          </form>
+        </div>
+
+        <div id="labworkView" class="view hidden-view">
+          <div class="labwork-container">
+            <div class="labwork-header">
+              <h2>Recent & Upcoming Labs</h2>
+              <p>Upload and view labwork photos for your labs within a 7-day window.</p>
+            </div>
+            <div id="labworkGrid" class="labwork-grid">
+              <!-- Lab cards will be injected here -->
+            </div>
+          </div>
+        </div>
       </section>
     </main>
 
@@ -90,6 +108,8 @@
       window.va = window.va || function () { (window.vaq = window.vaq || []).push(arguments); };
     </script>
     <script defer src="/_vercel/insights/script.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="app.js"></script>
+    <script src="labwork.js"></script>
   </body>
 </html>
