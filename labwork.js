@@ -60,6 +60,7 @@ async function getImagesForLab(course, day, group) {
     if (fileAge > SEVEN_DAYS_MS) {
       filesToDelete.push(`${folder}/${file.name}`);
     } else {
+      const { data: publicUrlData } = supabaseClient.storage.from('labwork').getPublicUrl(`${folder}/${file.name}`);
       const dateObj = file.created_at ? new Date(file.created_at) : new Date();
       const dateStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
       const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
@@ -355,15 +356,19 @@ window.renderLabwork = function() {
       uploadBtn.textContent = "Uploading...";
       uploadBtn.style.opacity = "0.7";
       
-      const success = await addImageForLab(lab.course, lab.day, lab.group, userName, file);
-      
-      if (success) {
-          await renderGallery();
+      try {
+        const success = await addImageForLab(lab.course, lab.day, lab.group, userName, file);
+        
+        if (success) {
+            await renderGallery();
+        }
+      } catch (err) {
+        console.error("Upload process error:", err);
+      } finally {
+        uploadBtn.textContent = "Upload Photo";
+        uploadBtn.style.opacity = "1";
+        fileInput.value = "";
       }
-      
-      uploadBtn.textContent = "Upload Photo";
-      uploadBtn.style.opacity = "1";
-      fileInput.value = "";
     });
     
     uploadWrapper.appendChild(uploadBtn);
