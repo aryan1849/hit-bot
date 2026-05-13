@@ -65,6 +65,8 @@ const input = document.querySelector("#questionInput");
 const sessionCount = document.querySelector("#sessionCount");
 const clearChat = document.querySelector("#clearChat");
 const promptChips = document.querySelectorAll(".prompt-chip");
+const groupModal = document.getElementById("groupModal");
+const groupBtns = document.querySelectorAll(".group-btn");
 
 let schedules = [];
 
@@ -376,8 +378,13 @@ function filterSessions(question) {
   const sessionType = detectSessionType(message);
   const day = detectDay(message);
   const semester = detectSemester(message);
-  const group = detectGroup(message);
+  let group = detectGroup(message);
   const course = detectCourse(message, schedules);
+  
+  if (!group) {
+    group = localStorage.getItem("userGroup");
+  }
+
   const broadScheduleRequest =
     message.includes("next") ||
     message.includes("upcoming") ||
@@ -447,11 +454,42 @@ function answerQuestion(question) {
     return conversation;
   }
 
+  if (message.includes("change group") || message.includes("set group")) {
+    const words = message.replaceAll(".", " ").split(" ");
+    let newGroup = null;
+    for (let index = 0; index < words.length; index += 1) {
+      const word = words[index];
+      if ((word === "group" || word === "gr") && /^\d+$/.test(words[index + 1] || "")) {
+        newGroup = words[index + 1];
+      }
+      const compact = word.match(/^gr(\d+)$/);
+      if (compact) {
+        newGroup = compact[1];
+      }
+    }
+
+    if (newGroup) {
+      localStorage.setItem("userGroup", newGroup);
+      return {
+        text: `Got it. I've updated your group to Group ${newGroup}.`,
+        sessions: [],
+        examples: [],
+      };
+    } else {
+      groupModal.classList.remove("hidden");
+      return {
+        text: "Please select your group from the prompt.",
+        sessions: [],
+        examples: [],
+      };
+    }
+  }
+
   if (message === "help" || message === "commands") {
     return {
       text: "Sure. Ask me the way you’d ask a friend who has the timetable open:",
       sessions: [],
-      examples: ["next CSE group 2 lab", "show Monday classes", "when is CSE2203", "when is library for group 1"],
+      examples: ["next lab", "show Monday classes", "when is CSE2203", "change group to 1"],
     };
   }
 
@@ -459,7 +497,7 @@ function answerQuestion(question) {
     return {
       text: "I’m not fully sure what you want me to check. Ask me about a day, course, group, lab, lecture, or whether you’re free.",
       sessions: [],
-      examples: ["am I free tomorrow?", "next group 2 lab", "when is CSE2203?"],
+      examples: ["am I free tomorrow?", "next lab", "when is CSE2203?"],
     };
   }
 
@@ -616,13 +654,31 @@ promptChips.forEach((chip) => {
   chip.addEventListener("click", () => ask(chip.textContent));
 });
 
+function addWelcomeMessage(group) {
+  addMessage("assistant", {
+    text: `Hey, I am hit.bot. I've set your group to Group ${group}. Ask me naturally about the CSE Section C timetable, even with typos.`,
+    sessions: [],
+    examples: ["am I free tomorrow?", "next lab", "change group to 1"],
+  });
+}
+
+groupBtns.forEach(btn => {
+  btn.addEventListener("click", () => {
+    const selectedGroup = btn.getAttribute("data-group");
+    localStorage.setItem("userGroup", selectedGroup);
+    groupModal.classList.add("hidden");
+    addWelcomeMessage(selectedGroup);
+  });
+});
+
 loadSchedules()
   .then(() => {
-    addMessage("assistant", {
-      text: "Hey, I am hit.bot. Ask me naturally about the CSE Section C timetable, even with typos.",
-      sessions: [],
-      examples: ["am I free tomorrow?", "next group 2 lab", "who made you?"],
-    });
+    const userGroup = localStorage.getItem("userGroup");
+    if (!userGroup) {
+      groupModal.classList.remove("hidden");
+    } else {
+      addWelcomeMessage(userGroup);
+    }
   })
   .catch(() => {
     sessionCount.textContent = "0";
