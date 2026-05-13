@@ -62,9 +62,18 @@ async function getImagesForLab(course, day, group) {
     } else {
       const { data: publicUrlData } = supabaseClient.storage.from('labwork').getPublicUrl(`${folder}/${file.name}`);
       const dateStr = file.created_at ? new Date(file.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "Unknown Date";
+      
+      const parts = file.name.split('_');
+      let uploader = "Someone";
+      if (parts.length >= 3) {
+        try { uploader = decodeURIComponent(parts[1]); } catch(e){}
+      }
+      
       validImages.push({
         url: publicUrlData.publicUrl,
         date: dateStr,
+        uploader: uploader,
+        path: `${folder}/${file.name}`,
         created_at: file.created_at
       });
     }
@@ -102,7 +111,7 @@ function getNextLabDate(dayStr, timeStr) {
   return targetDate;
 }
 
-async function addImageForLab(course, day, group, file) {
+async function addImageForLab(course, day, group, userName, file) {
   if (!supabaseClient) {
     alert("Cloud database is not connected. Saving locally for now.\n\nPlease open labwork.js and add your Supabase keys to share images globally.");
     
@@ -128,7 +137,8 @@ async function addImageForLab(course, day, group, file) {
   
   const folder = `${course.toLowerCase()}/${day.toLowerCase()}/${group.toLowerCase()}`;
   const ext = file.name.split('.').pop() || 'jpg';
-  const filename = `${folder}/${Date.now()}_${Math.random().toString(36).substring(7)}.${ext}`;
+  const safeName = encodeURIComponent(userName.trim());
+  const filename = `${folder}/${Date.now()}_${safeName}_${Math.random().toString(36).substring(7)}.${ext}`;
   
   const { error } = await supabaseClient.storage.from('labwork').upload(filename, file);
   
@@ -229,7 +239,7 @@ window.renderLabwork = function() {
           img.src = imgData.url;
           img.alt = "Labwork";
           img.style.border = "none"; // Remove border from img since wrapper has it
-          img.addEventListener("click", () => openImageViewer(imgData.url, imgData.date));
+          img.addEventListener("click", () => openImageViewer(imgData));
           
           const dateBadge = document.createElement("div");
           dateBadge.textContent = imgData.date;
@@ -262,7 +272,17 @@ window.renderLabwork = function() {
       const file = e.target.files[0];
       if (!file) return;
       
-      const confirmUpload = confirm(`Upload this photo for the lab on ${targetDateStr}?\n\nIt will be visible to everyone in your group and automatically deleted after 7 days.`);
+      let userName = localStorage.getItem("userName");
+      if (!userName) {
+        userName = prompt("Enter your name so others know who uploaded this photo:");
+        if (!userName || !userName.trim()) {
+           fileInput.value = "";
+           return;
+        }
+        localStorage.setItem("userName", userName.trim());
+      }
+      
+      const confirmUpload = confirm(`Upload this photo as '${userName}' for the lab on ${targetDateStr}?\n\nIt will be visible to everyone in your group and automatically deleted after 7 days.`);
       if (!confirmUpload) {
         fileInput.value = "";
         return;
@@ -271,7 +291,7 @@ window.renderLabwork = function() {
       uploadBtn.textContent = "Uploading...";
       uploadBtn.style.opacity = "0.7";
       
-      const success = await addImageForLab(lab.course, lab.day, lab.group, file);
+      const success = await addImageForLab(lab.course, lab.day, lab.group, userName, file);
       
       if (success) {
           await renderGallery();
@@ -290,11 +310,12 @@ window.renderLabwork = function() {
   });
 };
 
-function openImageViewer(imageSrc, dateStr) {
+function openImageViewer(imgData) {
   const modal = document.getElementById("imageViewerModal");
   const imgElement = document.getElementById("viewerImage");
   const downloadBtn = document.getElementById("downloadImageBtn");
   const shareBtn = document.getElementById("shareImageBtn");
+  const deleteBtn = document.getElementById("deleteImageBtn");
   const closeBtn = document.getElementById("closeImageViewer");
   const backdrop = modal.querySelector(".image-viewer-backdrop");
   
@@ -310,9 +331,9 @@ function openImageViewer(imageSrc, dateStr) {
     dateLabel.style.fontSize = "0.9rem";
     document.querySelector(".image-viewer-actions").insertAdjacentElement('beforebegin', dateLabel);
   }
-  dateLabel.textContent = `Uploaded on: ${dateStr}`;
+  dateLabel.textContent = `Uploaded by ${imgData.uploader} on ${imgData.date}`;
   
-  imgElement.src = imageSrc;
+  imgElement.src = imgData.url;
   modal.classList.remove("hidden");
   
   const closeModal = () => {
@@ -323,11 +344,35 @@ function openImageViewer(imageSrc, dateStr) {
   closeBtn.onclick = closeModal;
   backdrop.onclick = closeModal;
   
+  const currentUser = localStorage.getItem("userName");
+  if (currentUser && currentUser === imgData.uploader && imgData.path) {
+    deleteBtn.style.display = "flex";
+    deleteBtn.onclick = async () => {
+      if (!confirm("Are you sure you want to permanently delete your photo?")) return;
+      deleteBtn.style.opacity = "0.7";
+      deleteBtn.textContent = "Deleting...";
+      
+      const { error } = await supabaseClient.storage.from('labwork').remove([imgData.path]);
+      
+      deleteBtn.style.opacity = "1";
+      deleteBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete';
+      
+      if (error) {
+        alert("Failed to delete photo. Check your connection or Supabase DELETE policy.");
+      } else {
+        closeModal();
+        window.renderLabwork(); // Refresh gallery
+      }
+    };
+  } else {
+    deleteBtn.style.display = "none";
+  }
+  
   downloadBtn.onclick = async () => {
     downloadBtn.style.opacity = "0.7";
     downloadBtn.textContent = "Downloading...";
     try {
-      const response = await fetch(imageSrc);
+      const response = await fetch(imgData.url);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
@@ -347,7 +392,7 @@ function openImageViewer(imageSrc, dateStr) {
   
   shareBtn.onclick = async () => {
     try {
-      const response = await fetch(imageSrc);
+      const response = await fetch(imgData.url);
       const blob = await response.blob();
       const file = new File([blob], "labwork.jpg", { type: blob.type });
       
@@ -359,7 +404,7 @@ function openImageViewer(imageSrc, dateStr) {
       } else if (navigator.share) {
         await navigator.share({
           title: 'Labwork Photo',
-          url: imageSrc
+          url: imgData.url
         });
       } else {
         alert("Sharing is not supported on this device/browser.");
