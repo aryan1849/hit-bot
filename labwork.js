@@ -205,7 +205,7 @@ window.renderLabwork = function() {
     meta.innerHTML = `
       <span>${formatTimeDisplay(lab.start)} - ${formatTimeDisplay(lab.end)}</span>
       <span>Room: ${lab.room}</span>
-      <div style="margin-top: 8px; color: var(--gold); font-weight: 500; font-size: 0.85rem;">
+      <div style="margin-top: 8px; color: var(--ink); font-weight: 500; font-size: 0.85rem;">
         📸 Intended for lab on:<br/> ${targetDateStr}
       </div>
       <div style="color: var(--muted); font-size: 0.75rem; margin-top: 2px;">

@@ -1,16 +1,16 @@
 :root {
-  --bg: #090b10;
-  --surface: #111720;
-  --surface-strong: #151c27;
-  --surface-soft: #0d1219;
-  --ink: #f6f1e8;
-  --muted: #9da8b7;
-  --line: rgba(255, 255, 255, 0.11);
-  --accent: #35c28f;
-  --accent-dark: #25a678;
-  --accent-soft: rgba(53, 194, 143, 0.14);
-  --gold: #f3c96a;
-  --shadow: 0 22px 58px rgba(0, 0, 0, 0.38);
+  --bg: #212121;
+  --surface: #2f2f2f;
+  --surface-strong: #171717;
+  --surface-soft: #212121;
+  --ink: #ececec;
+  --muted: #b4b4b4;
+  --line: rgba(255, 255, 255, 0.1);
+  --accent: #ffffff;
+  --accent-dark: #ececec;
+  --accent-soft: rgba(255, 255, 255, 0.1);
+  --gold: #ffffff;
+  --shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 * {
@@ -20,11 +20,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background:
-    radial-gradient(circle at 16% 10%, rgba(53, 194, 143, 0.18), transparent 26%),
-    radial-gradient(circle at 82% 18%, rgba(243, 201, 106, 0.12), transparent 24%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 38%),
-    var(--bg);
+  background: var(--bg);
   color: var(--ink);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
@@ -41,7 +37,7 @@ button {
 .group-modal {
   position: fixed;
   inset: 0;
-  background: rgba(9, 11, 16, 0.85);
+  background: rgba(23, 23, 23, 0.85);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
@@ -95,8 +91,8 @@ button {
 }
 
 .group-btn:hover {
-  background: var(--accent);
-  color: #08110d;
+  background: var(--surface);
+  color: var(--ink);
 }
 
 .app-shell {
@@ -111,9 +107,8 @@ button {
   flex-direction: column;
   gap: 22px;
   padding: 28px;
-  border-right: 1px solid var(--line);
-  background: rgba(12, 17, 25, 0.86);
-  backdrop-filter: blur(18px);
+  background: var(--surface-strong);
+  border-right: none;
 }
 
 .brand {
@@ -125,13 +120,12 @@ button {
 .brand-mark {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent), var(--gold));
-  color: #08110d;
-  box-shadow: 0 14px 34px rgba(53, 194, 143, 0.24);
-  font-size: 1.45rem;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #171717;
+  font-size: 1.2rem;
   font-weight: 800;
 }
 
@@ -161,9 +155,9 @@ button {
 
 .stats div,
 .quick-panel {
-  border: 1px solid var(--line);
+  border: none;
   border-radius: 8px;
-  background: rgba(21, 28, 39, 0.72);
+  background: var(--bg);
 }
 
 .stats div {
@@ -197,18 +191,16 @@ button {
   min-height: 42px;
   margin-top: 8px;
   padding: 10px 12px;
-  border: 1px solid transparent;
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg);
   color: var(--ink);
   text-align: left;
-  transition: background 160ms ease, border-color 160ms ease, transform 160ms ease;
+  transition: background 160ms ease;
 }
 
 .prompt-chip:hover {
-  border-color: rgba(53, 194, 143, 0.42);
-  background: rgba(53, 194, 143, 0.12);
-  transform: translateY(-1px);
+  background: var(--surface);
 }
 
 .compact {
@@ -224,10 +216,11 @@ button {
 .tag-list span {
   padding: 6px 9px;
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: #8af0c7;
+  background: var(--surface);
+  color: var(--ink);
   font-size: 0.82rem;
-  font-weight: 650;
+  font-weight: 500;
+  border: 1px solid var(--line);
 }
 
 .creator-credit,
@@ -329,20 +322,19 @@ button {
 }
 
 .lab-card {
-  background: var(--surface);
+  background: var(--surface-strong);
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 20px;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  box-shadow: var(--shadow);
 }
 
 .lab-card h3 {
   margin: 0;
   font-size: 1.15rem;
-  color: var(--accent);
+  color: var(--ink);
 }
 
 .lab-card .meta {
@@ -415,8 +407,7 @@ button {
   gap: 18px;
   padding: 22px 28px;
   border-bottom: 1px solid var(--line);
-  background: rgba(12, 17, 25, 0.74);
-  backdrop-filter: blur(16px);
+  background: var(--bg);
 }
 
 .topbar h2 {
@@ -465,8 +456,8 @@ button {
   flex: 0 0 34px;
   width: 34px;
   height: 34px;
-  border-radius: 999px;
-  background: var(--surface-strong);
+  border-radius: 50%;
+  background: var(--surface);
   color: var(--ink);
   font-size: 0.8rem;
   font-weight: 800;
@@ -475,22 +466,23 @@ button {
 .message-row.user .avatar {
   order: 2;
   background: var(--accent);
+  color: #171717;
 }
 
 .bubble {
   max-width: min(680px, calc(100vw - 56px));
   padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
+  border: none;
+  background: transparent;
+  color: var(--ink);
 }
 
 .message-row.user .bubble {
-  border-color: transparent;
-  background: var(--accent);
-  color: #06110d;
-  font-weight: 650;
+  border-radius: 18px;
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 400;
+  padding: 14px 18px;
 }
 
 .bubble p {
@@ -531,11 +523,10 @@ button {
   gap: 12px;
   width: min(900px, calc(100% - 32px));
   margin: 0 auto 22px;
-  padding: 12px;
+  padding: 12px 18px;
   border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-strong);
-  box-shadow: var(--shadow);
+  border-radius: 24px;
+  background: var(--surface);
 }
 
 #questionInput {
@@ -557,11 +548,15 @@ button {
 #sendButton {
   border-color: transparent;
   background: var(--accent);
-  color: #06110d;
+  color: #171717;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  margin-bottom: 2px;
 }
 
 #sendButton:hover {
-  background: var(--accent-dark);
+  opacity: 0.8;
 }
 
 .sr-only {
@@ -631,7 +626,7 @@ button {
 .image-viewer-backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(9, 11, 16, 0.95);
+  background: rgba(23, 23, 23, 0.95);
   backdrop-filter: blur(10px);
 }
 
