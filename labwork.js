@@ -60,8 +60,9 @@ async function getImagesForLab(course, day, group) {
     if (fileAge > SEVEN_DAYS_MS) {
       filesToDelete.push(`${folder}/${file.name}`);
     } else {
-      const { data: publicUrlData } = supabaseClient.storage.from('labwork').getPublicUrl(`${folder}/${file.name}`);
-      const dateStr = file.created_at ? new Date(file.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : "Unknown Date";
+      const dateObj = file.created_at ? new Date(file.created_at) : new Date();
+      const dateStr = dateObj.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+      const timeStr = dateObj.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
       
       const parts = file.name.split('_');
       let uploader = "Someone";
@@ -72,6 +73,8 @@ async function getImagesForLab(course, day, group) {
       validImages.push({
         url: publicUrlData.publicUrl,
         date: dateStr,
+        time: timeStr,
+        timestamp: dateObj.getTime(),
         uploader: uploader,
         path: `${folder}/${file.name}`,
         created_at: file.created_at
@@ -227,27 +230,88 @@ window.renderLabwork = function() {
       if (images.length === 0) {
         gallery.style.display = "none";
       } else {
-        gallery.style.display = "grid";
-        images.forEach(imgData => {
-          const wrapper = document.createElement("div");
-          wrapper.style.position = "relative";
-          wrapper.style.overflow = "hidden";
-          wrapper.style.borderRadius = "8px";
-          wrapper.style.border = "1px solid var(--line)";
+        gallery.style.display = "flex";
+        gallery.style.flexDirection = "column";
+        gallery.style.gap = "20px";
+        
+        // Group by uploader
+        const groups = {};
+        images.forEach(img => {
+          if (!groups[img.uploader]) {
+            groups[img.uploader] = {
+              uploader: img.uploader,
+              latestTime: img.timestamp,
+              dateStr: img.date,
+              timeStr: img.time,
+              photos: []
+            };
+          }
+          groups[img.uploader].photos.push(img);
+          if (img.timestamp > groups[img.uploader].latestTime) {
+            groups[img.uploader].latestTime = img.timestamp;
+            groups[img.uploader].dateStr = img.date;
+            groups[img.uploader].timeStr = img.time;
+          }
+        });
+        
+        const sortedGroups = Object.values(groups).sort((a, b) => b.latestTime - a.latestTime);
+        
+        sortedGroups.forEach(group => {
+          const groupDiv = document.createElement("div");
           
-          const img = document.createElement("img");
-          img.src = imgData.url;
-          img.alt = "Labwork";
-          img.style.border = "none"; // Remove border from img since wrapper has it
-          img.addEventListener("click", () => openImageViewer(imgData));
+          const header = document.createElement("div");
+          header.style.display = "flex";
+          header.style.justifyContent = "space-between";
+          header.style.alignItems = "center";
+          header.style.marginBottom = "10px";
+          header.style.paddingBottom = "6px";
+          header.style.borderBottom = "1px solid var(--line)";
           
-          const dateBadge = document.createElement("div");
-          dateBadge.textContent = imgData.date;
-          dateBadge.className = "date-badge";
+          const nameSpan = document.createElement("div");
+          nameSpan.innerHTML = `<span style="font-size: 14px;">🧑‍🎓</span> <strong style="color: var(--ink); font-size: 0.9rem;">${group.uploader}</strong>`;
           
-          wrapper.appendChild(img);
-          wrapper.appendChild(dateBadge);
-          gallery.appendChild(wrapper);
+          const timeSpan = document.createElement("div");
+          timeSpan.textContent = `${group.dateStr} • ${group.timeStr}`;
+          timeSpan.style.color = "var(--muted)";
+          timeSpan.style.fontSize = "0.75rem";
+          
+          header.appendChild(nameSpan);
+          header.appendChild(timeSpan);
+          groupDiv.appendChild(header);
+          
+          const grid = document.createElement("div");
+          grid.style.display = "grid";
+          grid.style.gridTemplateColumns = "repeat(auto-fill, minmax(80px, 1fr))";
+          grid.style.gap = "8px";
+          
+          group.photos.forEach(imgData => {
+            const wrapper = document.createElement("div");
+            wrapper.style.position = "relative";
+            wrapper.style.overflow = "hidden";
+            wrapper.style.borderRadius = "6px";
+            wrapper.style.border = "1px solid var(--line)";
+            wrapper.style.aspectRatio = "1";
+            wrapper.style.transition = "transform 0.2s ease";
+            wrapper.style.cursor = "pointer";
+            
+            wrapper.onmouseover = () => wrapper.style.transform = "scale(1.05)";
+            wrapper.onmouseout = () => wrapper.style.transform = "scale(1)";
+            
+            const img = document.createElement("img");
+            img.src = imgData.url;
+            img.alt = "Labwork";
+            img.style.width = "100%";
+            img.style.height = "100%";
+            img.style.objectFit = "cover";
+            img.style.border = "none";
+            img.addEventListener("click", () => openImageViewer(imgData));
+            
+            wrapper.appendChild(img);
+            grid.appendChild(wrapper);
+          });
+          
+          groupDiv.appendChild(grid);
+          gallery.appendChild(groupDiv);
         });
       }
     };
@@ -331,7 +395,7 @@ function openImageViewer(imgData) {
     dateLabel.style.fontSize = "0.9rem";
     document.querySelector(".image-viewer-actions").insertAdjacentElement('beforebegin', dateLabel);
   }
-  dateLabel.textContent = `Uploaded by ${imgData.uploader} on ${imgData.date}`;
+  dateLabel.textContent = `Uploaded by ${imgData.uploader} on ${imgData.date} at ${imgData.time}`;
   
   imgElement.src = imgData.url;
   modal.classList.remove("hidden");
