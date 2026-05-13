@@ -96,10 +96,9 @@ button {
 }
 
 .app-shell {
-  display: grid;
-  grid-template-columns: 320px minmax(0, 1fr);
-  gap: 0;
+  display: flex;
   min-height: 100vh;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -109,6 +108,24 @@ button {
   padding: 28px;
   background: var(--surface-strong);
   border-right: none;
+  width: var(--sidebar-width, 300px);
+  min-width: 220px;
+  max-width: 600px;
+  flex-shrink: 0;
+}
+
+.resizer {
+  width: 5px;
+  cursor: col-resize;
+  background-color: transparent;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 10;
+  transition: background-color 0.2s ease;
+}
+
+.resizer:hover, .resizer.dragging {
+  background-color: var(--line);
 }
 
 .brand {
@@ -250,6 +267,7 @@ button {
   display: flex;
   flex-direction: column;
   min-width: 0;
+  flex-grow: 1;
   height: 100vh;
 }
 
@@ -572,7 +590,11 @@ button {
 
 @media (max-width: 820px) {
   .app-shell {
-    grid-template-columns: 1fr;
+    flex-direction: column;
+  }
+  
+  .resizer {
+    display: none;
   }
 
   .sidebar {
