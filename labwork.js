@@ -15,13 +15,13 @@ if (window.supabase && SUPABASE_URL !== "YOUR_SUPABASE_URL_HERE") {
 const DAYS_ORDER = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
 
 function getLabSessions() {
-  if (!window.schedules || window.schedules.length === 0) {
+  if (typeof schedules === 'undefined' || schedules.length === 0) {
     return [];
   }
 
   const userGroup = localStorage.getItem("userGroup");
   
-  return window.schedules
+  return schedules
     .filter(session => session.session_type === "lab")
     .filter(session => !userGroup || session.group === userGroup || session.group === "all")
     .sort((a, b) => {
