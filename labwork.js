@@ -83,7 +83,7 @@ async function getImagesForLab(course, day, group) {
     }
   });
 
-  // Lazy auto-delete expired photos
+  // Lazy auto-delete expired files
   if (filesToDelete.length > 0) {
     supabaseClient.storage.from('labwork').remove(filesToDelete)
       .catch(e => console.error("Auto-delete failed. Make sure you have a DELETE policy in Supabase.", e));
@@ -206,10 +206,10 @@ window.renderLabwork = function() {
       <span>${formatTimeDisplay(lab.start)} - ${formatTimeDisplay(lab.end)}</span>
       <span>Room: ${lab.room}</span>
       <div style="margin-top: 8px; color: var(--ink); font-weight: 500; font-size: 0.85rem;">
-        📸 Intended for lab on:<br/> ${targetDateStr}
+        📁 Intended for lab on:<br/> ${targetDateStr}
       </div>
       <div style="color: var(--muted); font-size: 0.75rem; margin-top: 2px;">
-        Photos auto-delete after 7 days
+        Files auto-delete after 7 days
       </div>
     `;
     
@@ -222,7 +222,7 @@ window.renderLabwork = function() {
     gallery.className = "lab-gallery";
     
     const renderGallery = async () => {
-      gallery.innerHTML = "<span style='color: var(--muted); font-size: 0.8rem;'>Loading photos...</span>";
+      gallery.innerHTML = "<span style='color: var(--muted); font-size: 0.8rem;'>Loading files...</span>";
       gallery.style.display = "block";
       
       const images = await getImagesForLab(lab.course, lab.day, lab.group);
@@ -336,7 +336,7 @@ window.renderLabwork = function() {
     
     const uploadBtn = document.createElement("div");
     uploadBtn.className = "upload-btn";
-    uploadBtn.textContent = "Upload Photo";
+    uploadBtn.textContent = "Upload File";
     
     const fileInput = document.createElement("input");
     fileInput.type = "file";
@@ -348,7 +348,7 @@ window.renderLabwork = function() {
       
       let userName = localStorage.getItem("userName");
       if (!userName) {
-        userName = prompt("Enter your name so others know who uploaded this photo:");
+        userName = prompt("Enter your name so others know who uploaded this file:");
         if (!userName || !userName.trim()) {
            fileInput.value = "";
            return;
@@ -356,7 +356,7 @@ window.renderLabwork = function() {
         localStorage.setItem("userName", userName.trim());
       }
       
-      const confirmUpload = confirm(`Upload this photo as '${userName}' for the lab on ${targetDateStr}?\n\nIt will be visible to everyone in your group and automatically deleted after 7 days.`);
+      const confirmUpload = confirm(`Upload this file as '${userName}' for the lab on ${targetDateStr}?\n\nIt will be visible to everyone in your group and automatically deleted after 7 days.`);
       if (!confirmUpload) {
         fileInput.value = "";
         return;
@@ -374,7 +374,7 @@ window.renderLabwork = function() {
       } catch (err) {
         console.error("Upload process error:", err);
       } finally {
-        uploadBtn.textContent = "Upload Photo";
+        uploadBtn.textContent = "Upload File";
         uploadBtn.style.opacity = "1";
         fileInput.value = "";
       }
@@ -443,7 +443,7 @@ function openImageViewer(imgData) {
   if (currentUser && currentUser === imgData.uploader && imgData.path) {
     deleteBtn.style.display = "flex";
     deleteBtn.onclick = async () => {
-      if (!confirm("Are you sure you want to permanently delete your photo?")) return;
+      if (!confirm("Are you sure you want to permanently delete your file?")) return;
       deleteBtn.style.opacity = "0.7";
       deleteBtn.textContent = "Deleting...";
       
@@ -453,7 +453,7 @@ function openImageViewer(imgData) {
       deleteBtn.innerHTML = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg> Delete';
       
       if (error) {
-        alert("Failed to delete photo. Check your connection or Supabase DELETE policy.");
+        alert("Failed to delete file. Check your connection or Supabase DELETE policy.");
       } else {
         closeModal();
         window.renderLabwork(); // Refresh gallery
