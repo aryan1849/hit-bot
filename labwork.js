@@ -194,6 +194,11 @@ window.renderLabwork = function() {
     
     // Create header
     const header = document.createElement("div");
+    header.style.display = "flex";
+    header.style.justifyContent = "space-between";
+    header.style.alignItems = "flex-start";
+    
+    const titleSection = document.createElement("div");
     const title = document.createElement("h3");
     title.textContent = lab.course.toUpperCase() + " Lab";
     
@@ -213,8 +218,26 @@ window.renderLabwork = function() {
       </div>
     `;
     
-    header.appendChild(title);
-    header.appendChild(meta);
+    titleSection.appendChild(title);
+    titleSection.appendChild(meta);
+    header.appendChild(titleSection);
+    
+    // Create upload button inline in header
+    const uploadBtn = document.createElement("button");
+    uploadBtn.className = "action-btn";
+    uploadBtn.style.padding = "6px 12px";
+    uploadBtn.style.fontSize = "0.85rem";
+    uploadBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Upload`;
+    
+    const fileInput = document.createElement("input");
+    fileInput.type = "file";
+    fileInput.accept = "image/png, image/jpeg, image/jpg, image/webp, application/pdf";
+    fileInput.style.display = "none";
+    
+    uploadBtn.addEventListener("click", () => fileInput.click());
+    
+    header.appendChild(uploadBtn);
+    header.appendChild(fileInput);
     card.appendChild(header);
     
     // Create gallery
@@ -229,7 +252,18 @@ window.renderLabwork = function() {
       
       gallery.innerHTML = "";
       if (images.length === 0) {
-        gallery.style.display = "none";
+        gallery.style.display = "flex";
+        gallery.style.alignItems = "center";
+        gallery.style.justifyContent = "center";
+        gallery.style.padding = "32px 0";
+        gallery.style.color = "var(--muted)";
+        gallery.style.fontSize = "0.9rem";
+        gallery.innerHTML = `
+          <div style="text-align: center;">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px; opacity: 0.5;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+            <p style="margin: 0;">No files shared yet.</p>
+          </div>
+        `;
       } else {
         gallery.style.display = "flex";
         gallery.style.flexDirection = "column";
@@ -330,18 +364,6 @@ window.renderLabwork = function() {
     renderGallery();
     card.appendChild(gallery);
     
-    // Create upload button
-    const uploadWrapper = document.createElement("div");
-    uploadWrapper.className = "upload-btn-wrapper";
-    
-    const uploadBtn = document.createElement("div");
-    uploadBtn.className = "upload-btn";
-    uploadBtn.textContent = "Upload File";
-    
-    const fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = "image/png, image/jpeg, image/jpg, image/webp, application/pdf";
-    
     fileInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
       if (!file) return;
@@ -362,7 +384,7 @@ window.renderLabwork = function() {
         return;
       }
       
-      uploadBtn.textContent = "Uploading...";
+      uploadBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Uploading...`;
       uploadBtn.style.opacity = "0.7";
       
       try {
@@ -374,15 +396,11 @@ window.renderLabwork = function() {
       } catch (err) {
         console.error("Upload process error:", err);
       } finally {
-        uploadBtn.textContent = "Upload File";
+        uploadBtn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 4px;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg> Upload`;
         uploadBtn.style.opacity = "1";
         fileInput.value = "";
       }
     });
-    
-    uploadWrapper.appendChild(uploadBtn);
-    uploadWrapper.appendChild(fileInput);
-    card.appendChild(uploadWrapper);
     
     labworkGrid.appendChild(card);
   });
