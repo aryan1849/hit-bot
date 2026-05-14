@@ -298,16 +298,25 @@ window.renderLabwork = function() {
             wrapper.onmouseover = () => wrapper.style.transform = "scale(1.05)";
             wrapper.onmouseout = () => wrapper.style.transform = "scale(1)";
             
-            const img = document.createElement("img");
-            img.src = imgData.url;
-            img.alt = "Labwork";
-            img.style.width = "100%";
-            img.style.height = "100%";
-            img.style.objectFit = "cover";
-            img.style.border = "none";
-            img.addEventListener("click", () => openImageViewer(imgData));
+            const isPdf = imgData.path && imgData.path.toLowerCase().endsWith('.pdf');
             
-            wrapper.appendChild(img);
+            if (isPdf) {
+              const placeholder = document.createElement("div");
+              placeholder.className = "pdf-placeholder";
+              placeholder.innerHTML = `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg><span>PDF</span>`;
+              placeholder.addEventListener("click", () => openImageViewer(imgData));
+              wrapper.appendChild(placeholder);
+            } else {
+              const img = document.createElement("img");
+              img.src = imgData.url;
+              img.alt = "Labwork";
+              img.style.width = "100%";
+              img.style.height = "100%";
+              img.style.objectFit = "cover";
+              img.style.border = "none";
+              img.addEventListener("click", () => openImageViewer(imgData));
+              wrapper.appendChild(img);
+            }
             grid.appendChild(wrapper);
           });
           
@@ -331,7 +340,7 @@ window.renderLabwork = function() {
     
     const fileInput = document.createElement("input");
     fileInput.type = "file";
-    fileInput.accept = "image/png, image/jpeg, image/jpg, image/webp";
+    fileInput.accept = "image/png, image/jpeg, image/jpg, image/webp, application/pdf";
     
     fileInput.addEventListener("change", async (e) => {
       const file = e.target.files[0];
@@ -402,12 +411,29 @@ function openImageViewer(imgData) {
   }
   dateLabel.textContent = `Uploaded by ${imgData.uploader} on ${imgData.date} at ${imgData.time}`;
   
-  imgElement.src = imgData.url;
+  const isPdf = imgData.path && imgData.path.toLowerCase().endsWith('.pdf');
+  const pdfElement = document.getElementById("viewerPdf");
+
+  if (isPdf) {
+    imgElement.style.display = "none";
+    if (pdfElement) {
+      pdfElement.src = imgData.url;
+      pdfElement.style.display = "block";
+    }
+  } else {
+    imgElement.src = imgData.url;
+    imgElement.style.display = "block";
+    if (pdfElement) {
+      pdfElement.style.display = "none";
+    }
+  }
+  
   modal.classList.remove("hidden");
   
   const closeModal = () => {
     modal.classList.add("hidden");
     imgElement.src = "";
+    if (pdfElement) pdfElement.src = "";
   };
   
   closeBtn.onclick = closeModal;
@@ -447,7 +473,7 @@ function openImageViewer(imgData) {
       const a = document.createElement("a");
       a.style.display = "none";
       a.href = url;
-      a.download = "labwork_" + Date.now() + ".jpg";
+      a.download = isPdf ? "labwork_" + Date.now() + ".pdf" : "labwork_" + Date.now() + ".jpg";
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
@@ -463,7 +489,8 @@ function openImageViewer(imgData) {
     try {
       const response = await fetch(imgData.url);
       const blob = await response.blob();
-      const file = new File([blob], "labwork.jpg", { type: blob.type });
+      const filename = isPdf ? "labwork.pdf" : "labwork.jpg";
+      const file = new File([blob], filename, { type: blob.type });
       
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
